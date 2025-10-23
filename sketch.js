@@ -4,48 +4,48 @@
 
 let finalScore = 0; 
 let maxScore = 0;
-let scoreText = "等待 H5P 成績..."; // 初始文字
-let fireworks = []; // 儲存煙火物件的陣列
-let gravity; // 全域重力向量
-let isFireworksMode = false; // 控制是否顯示煙火的旗標
+// 修正：初始文本增加提示，幫助確認程式碼已運行
+let scoreText = "等待 H5P 成績 (請完成測驗)..."; 
+let fireworks = []; 
+let gravity; 
+let isFireworksMode = false; 
 
 // 接收來自 H5P iframe 的 postMessage 數據
 window.addEventListener('message', function (event) {
     
-    // 偵錯: 確保收到的數據是物件且包含 type 欄位
-    if (typeof event.data !== 'object' || event.data === null || !event.data.type) {
+    // 【偵錯】確認收到的數據格式正確
+    if (typeof event.data !== 'object' || event.data === null || event.data.type !== 'H5P_SCORE_RESULT') {
+        // 如果不是我們期待的 H5P 訊息，則忽略
         return; 
     }
     
     const data = event.data;
     
-    if (data && data.type === 'H5P_SCORE_RESULT') {
-        
-        // 確保數據有效
-        if (typeof data.score !== 'number' || typeof data.maxScore !== 'number') {
-             console.error("H5P 數據格式錯誤：score 或 maxScore 不是數字。");
-             return;
-        }
-
-        // !!! 關鍵步驟：更新全域變數 !!!
-        finalScore = data.score; 
-        maxScore = data.maxScore;
-        
-        let percentage = (maxScore > 0) ? (finalScore / maxScore) * 100 : 0;
-        
-        // ----------------------------------------
-        // 決定是否開啟煙火模式
-        // ----------------------------------------
-        if (percentage >= 90) {
-            isFireworksMode = true; // 分數優異，開啟煙火模式
-        } else {
-            isFireworksMode = false; // 分數不夠，關閉煙火模式
-            fireworks = []; // 清空所有煙火
-        }
-        
-        // 偵錯輸出
-        console.log(`分數已接收: ${finalScore}/${maxScore} (${percentage.toFixed(2)}%)，煙火模式: ${isFireworksMode}`);
+    // 確保分數數據是有效的數字
+    if (typeof data.score !== 'number' || typeof data.maxScore !== 'number') {
+         console.error("H5P 數據格式錯誤：score 或 maxScore 不是數字。");
+         return;
     }
+
+    // !!! 關鍵步驟：更新全域變數 !!!
+    finalScore = data.score; 
+    maxScore = data.maxScore;
+    
+    let percentage = (maxScore > 0) ? (finalScore / maxScore) * 100 : 0;
+    
+    // ----------------------------------------
+    // 決定是否開啟煙火模式
+    // ----------------------------------------
+    if (percentage >= 90) {
+        isFireworksMode = true; 
+    } else {
+        isFireworksMode = false; 
+        fireworks = []; 
+    }
+    
+    // 偵錯輸出：檢查分數是否成功接收
+    console.log(`分數已接收: ${finalScore}/${maxScore} (${percentage.toFixed(2)}%)，煙火模式: ${isFireworksMode}`);
+    
 }, false);
 
 
@@ -54,15 +54,11 @@ window.addEventListener('message', function (event) {
 // -----------------------------------------------------------------
 
 function setup() { 
-    // 創建 Canvas 
     createCanvas(windowWidth / 2, windowHeight / 2); 
-    
-    // 啟用 HSB 色彩模式 (色相 0-360, 飽和度 0-100, 亮度 0-100, 透明度 0-1)
+    // 啟用 HSB 色彩模式
     colorMode(HSB, 360, 100, 100, 1); 
-    
     gravity = createVector(0, 0.2);
-
-    // 【修正：移除 noLoop()】，讓 draw() 持續運行。
+    // draw() 保持持續運行
 } 
 
 
@@ -81,10 +77,10 @@ function draw() {
     if (isFireworksMode) {
         // 煙火模式：暗色背景，半透明產生拖尾效果 (0.1 透明度)
         background(0, 0, 0, 0.1); 
-        // 【關鍵修正】高幀率以流暢顯示動畫
+        // 高幀率以流暢顯示動畫
         frameRate(60); 
         
-        // 隨機發射新的煙火 (每 20 幀，約 0.3 秒，有 80% 機會發射)
+        // 隨機發射新的煙火 
         if (frameCount % 20 === 0 && random(1) < 0.8) {
             fireworks.push(new Firework(random(width), height));
         }
@@ -93,7 +89,6 @@ function draw() {
         for (let i = fireworks.length - 1; i >= 0; i--) {
             fireworks[i].update();
             fireworks[i].show();
-            // 移除已經結束的煙火
             if (fireworks[i].done()) {
                 fireworks.splice(i, 1);
             }
@@ -102,7 +97,7 @@ function draw() {
     } else {
         // 非煙火模式：白色背景 (不透明)
         background(0, 0, 100, 1); 
-        // 【關鍵修正】低幀率以節省 CPU，但仍保證分數文字會更新
+        // 低幀率以節省 CPU，但仍保證分數文字會更新
         frameRate(1); 
     }
 
@@ -133,20 +128,20 @@ function draw() {
         text("需要加強努力！", width / 2, height / 2 - 50);
         
     } else {
-        // 初始狀態
+        // 初始狀態 (顯示等待訊息)
         fill(0, 0, 30);
-        text(scoreText, width / 2, height / 2);
+        text(scoreText, width / 2, height / 2 - 50);
     }
 
-    // 顯示具體分數 (小字)
+    // 顯示具體分數 (小字) - 無論如何都顯示 0/0 或實際分數
     textSize(24);
-    fill(0, 0, 30); // 深灰色
+    fill(0, 0, 30); 
     text(`得分: ${finalScore}/${maxScore} (${percentage.toFixed(1)}%)`, width / 2, height / 2 + 20);
 }
 
 
 // =================================================================
-// 步驟四：煙火和粒子類別 (無變動)
+// 步驟四：煙火和粒子類別 (Particle & Firework Classes)
 // -----------------------------------------------------------------
 
 class Particle {
