@@ -43,11 +43,6 @@ window.addEventListener('message', function (event) {
             fireworks = []; // 清空所有煙火
         }
         
-        // 呼叫 redraw 以更新畫面上顯示的文字
-        if (typeof redraw === 'function') {
-            redraw(); 
-        }
-        
         // 偵錯輸出
         console.log(`分數已接收: ${finalScore}/${maxScore} (${percentage.toFixed(2)}%)，煙火模式: ${isFireworksMode}`);
     }
@@ -60,7 +55,6 @@ window.addEventListener('message', function (event) {
 
 function setup() { 
     // 創建 Canvas 
-    // 由於您使用了 windowWidth / 2，它會佔據一半空間
     createCanvas(windowWidth / 2, windowHeight / 2); 
     
     // 啟用 HSB 色彩模式 (色相 0-360, 飽和度 0-100, 亮度 0-100, 透明度 0-1)
@@ -68,8 +62,7 @@ function setup() {
     
     gravity = createVector(0, 0.2);
 
-    // 預設關閉 draw() 循環
-    noLoop(); 
+    // 【修正：移除 noLoop()】，讓 draw() 持續運行。
 } 
 
 
@@ -87,10 +80,9 @@ function draw() {
     
     if (isFireworksMode) {
         // 煙火模式：暗色背景，半透明產生拖尾效果 (0.1 透明度)
-        // 使用 HSB 黑色 (亮度 0)
         background(0, 0, 0, 0.1); 
-        // 【關鍵】保持循環運行
-        if (!isLooping()) loop(); 
+        // 【關鍵修正】高幀率以流暢顯示動畫
+        frameRate(60); 
         
         // 隨機發射新的煙火 (每 20 幀，約 0.3 秒，有 80% 機會發射)
         if (frameCount % 20 === 0 && random(1) < 0.8) {
@@ -110,8 +102,8 @@ function draw() {
     } else {
         // 非煙火模式：白色背景 (不透明)
         background(0, 0, 100, 1); 
-        // 【關鍵】停止循環
-        if (isLooping()) noLoop();
+        // 【關鍵修正】低幀率以節省 CPU，但仍保證分數文字會更新
+        frameRate(1); 
     }
 
 
@@ -154,7 +146,7 @@ function draw() {
 
 
 // =================================================================
-// 步驟四：煙火和粒子類別
+// 步驟四：煙火和粒子類別 (無變動)
 // -----------------------------------------------------------------
 
 class Particle {
@@ -162,7 +154,6 @@ class Particle {
         this.pos = createVector(x, y);
         this.hu = hu; 
         this.firework = firework;
-        // 亮度作為生命週期
         this.lifespan = 100; 
         
         if (this.firework) {
@@ -191,13 +182,10 @@ class Particle {
     
     show() {
         if (!this.firework) {
-            // 爆炸碎屑
             strokeWeight(3);
-            // 顏色 (色相, 飽和度, 亮度, 透明度)
             stroke(this.hu, 100, this.lifespan, this.lifespan / 100); 
             point(this.pos.x, this.pos.y);
         } else {
-            // 火箭本體
             strokeWeight(4);
             stroke(this.hu, 100, 100);
             point(this.pos.x, this.pos.y);
@@ -222,14 +210,12 @@ class Firework {
             this.firework.applyForce(gravity);
             this.firework.update();
             
-            // 當火箭速度開始下降 (y 軸速度 >= 0) 就爆炸
             if (this.firework.vel.y >= 0) {
                 this.exploded = true;
                 this.explode();
             }
         }
         
-        // 更新爆炸後的粒子
         for (let i = this.particles.length - 1; i >= 0; i--) {
             this.particles[i].applyForce(gravity);
             this.particles[i].update();
@@ -240,7 +226,6 @@ class Firework {
     }
     
     explode() {
-        // 產生 50-150 個爆炸粒子
         for (let i = 0; i < random(50, 150); i++) {
             const p = new Particle(this.firework.pos.x, this.firework.pos.y, this.hu, false);
             this.particles.push(p);
@@ -252,7 +237,6 @@ class Firework {
             this.firework.show();
         }
         
-        // 顯示爆炸後的粒子
         for (let p of this.particles) {
             p.show();
         }
